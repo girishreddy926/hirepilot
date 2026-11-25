@@ -1,0 +1,21 @@
+HirePilot AI – Sample Input
+============================
+Use this file as the starting point. Upload it on the Overview page, then work through each section. Every change is recorded. At the end click "Generate final PDF".
+
+VACANCIES
+---------
+1. Senior Data Engineer | Engineering | Maria Ozola | Priority | Must: Python, SQL, Spark, Azure | Nice: Databricks, Airflow
+2. HR Business Partner | People | Janis Berzins | Pending | Must: Employment law, Stakeholder management, Coaching | Nice: HRIS
+3. Customer Success Lead | Sales | Elena Petrova | Initial | Must: Customer onboarding, CRM, Team leadership | Nice: SaaS
+
+CANDIDATES
+----------
+Aiko Tanaka | Senior Data Engineer | LinkedIn | Interview | Python, SQL, Spark
+Daniel Okafor | Senior Data Engineer | Referral | Screened | Python, Azure, SQL
+Sofia Marques | Senior Data Engineer | Job board | Sourced | SQL, Tableau
+Liam Walsh | HR Business Partner | Referral | Offer | Employment law, Coaching, Stakeholder management
+Ingrid Larsen | HR Business Partner | LinkedIn | Interview | Stakeholder management, Employment law
+Priya Nair | Customer Success Lead | Job board | Screened | CRM, Customer onboarding, Team leadership
+Mateo Silva | Customer Success Lead | Agency | Sourced | CRM
+Chloe Dubois | Senior Data Engineer | Job board | Hired | Python, SQL, Spark, Azure
+Noah Kim | Senior Data Engineer | Job board | Rejected | Excel
