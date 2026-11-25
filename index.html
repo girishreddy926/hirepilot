@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>HirePilot AI – Simple flow</title>
+<meta name="description" content="Load sample input, work through recruitment sections (each step recorded), generate one final PDF.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>:root{--ink:#0f1b2d;--bg:#eef1f4;--card:#fff;--line:#d9dee5;--mute:#5a6678;--accent:#0b6e99;--accent-d:#085577;--amber:#8a5200;--amber-bg:#fff1d6;--ok:#17784f;--ok-bg:#e1f3e8;--bad:#b42318;--bad-bg:#fde8e6;--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 var(--sans);color:var(--ink);background:var(--bg)}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.side{background:var(--ink);color:#c9d3e0;padding:20px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font:700 21px var(--serif);color:#fff;padding:0 10px 4px}
+.brand-sub{font-size:12px;padding:0 10px 18px;color:#8fa0b5}
+.side button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;color:inherit;padding:9px 10px;border-radius:8px;font:inherit;cursor:pointer}
+.side button:hover{background:#1b2b45}
+.side button[aria-current=page]{background:var(--accent);color:#fff}
+.side .n{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#22344f;font-size:12px;flex:none}
+.side [aria-current=page] .n{background:#fff;color:var(--accent-d)}
+.side hr{border:0;border-top:1px solid #22344f;margin:10px 0}
+main{padding:28px clamp(16px,4vw,44px) 60px;max-width:1180px;width:100%}
+main:focus{outline:none}
+.vh{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap}
+.ag{margin:0;color:var(--accent);font-weight:600;font-size:13px}
+h1{font:700 30px/1.2 var(--serif);margin:2px 0 6px}
+h2{font:700 19px var(--serif);margin:0 0 12px}
+h3{font-size:15px;margin:0 0 6px}
+.lead{margin:0;color:var(--mute);max-width:62ch}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+.grid{display:grid;gap:14px;margin-bottom:18px}
+.g4{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.stat b{display:block;font:700 28px var(--serif)}
+.stat span{color:var(--mute);font-size:13px}
+form.f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:end}
+form.f .wide{grid-column:1/-1}
+label{display:block;font-size:13px;font-weight:600;color:#33415a}
+input,select,textarea{width:100%;margin-top:4px;padding:8px 10px;border:1px solid #b9c2cf;border-radius:7px;font:inherit;background:#fff;color:var(--ink)}
+textarea{min-height:92px;resize:vertical}
+label.chk{display:flex;gap:8px;font-weight:400;align-items:flex-start}
+label.chk input{width:auto;margin-top:4px}
+:focus-visible{outline:3px solid #7cc4e6;outline-offset:1px}
+.btn{background:var(--accent);color:#fff;border:1px solid var(--accent);padding:8px 14px;border-radius:7px;font:600 14px var(--sans);cursor:pointer}
+.btn:hover{background:var(--accent-d)}
+.btn.ghost{background:#fff;color:var(--accent-d);border-color:#9bbfd1}
+.btn.ghost:hover{background:#eaf4f9}
+.btn.sm{padding:4px 9px;font-size:13px}
+.btn.danger{background:#fff;color:var(--bad);border-color:#e3a8a3}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:13px;color:var(--mute);font-weight:600}
+th,td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.tbl{overflow-x:auto}
+.tag{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:600;background:#e6eaf0;color:#33415a}
+.tag.ok{background:var(--ok-bg);color:var(--ok)}
+.tag.warn{background:var(--amber-bg);color:var(--amber)}
+.tag.bad{background:var(--bad-bg);color:var(--bad)}
+.note{background:var(--amber-bg);border-left:4px solid #e0a43a;padding:10px 12px;border-radius:6px;font-size:14px;margin:0 0 14px}
+.empty{color:var(--mute);padding:14px;border:1px dashed #b9c2cf;border-radius:8px;text-align:center}
+pre.doc{white-space:pre-wrap;font:14px/1.55 var(--sans);background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:12px;margin:8px 0}
+.board{display:grid;grid-template-columns:repeat(6,minmax(190px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px}
+.col{background:#e6ebf1;border-radius:9px;padding:8px}
+.col h3{display:flex;justify-content:space-between}
+.pc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:8px;font-size:13px}
+.pc select{padding:3px 6px;font-size:12px}
+.bar{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+.bar i{display:block;height:20px;background:var(--accent);border-radius:4px;min-width:3px}
+.bar span:first-child{width:84px;flex:none}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.task-status{font-weight:700}.task-status.Queued{color:#5a6678}.task-status.\ In\ Progress{color:#0b6e99}.task-status.Blocked{color:#b42318}.task-status.Completed{color:#17784f}
+.report-box{white-space:pre-wrap;background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:12px;font:13px/1.5 var(--sans);max-height:420px;overflow:auto}
+.flow span{background:#e6f1f6;color:var(--accent-d);border-radius:6px;padding:3px 8px}
+.flow em{color:var(--mute);font-style:normal}
+ul.plain{margin:0;padding-left:18px}
+ul.plain li{margin:3px 0}
+.chkl{list-style:none;padding:0;margin:0}
+.chkl li{padding:4px 0}
+.chkl label{font-weight:400;display:flex;gap:8px}
+.chkl input{width:auto;margin:3px 0 0}
+details{margin-top:8px}
+summary{cursor:pointer;font-weight:600;color:var(--accent-d)}
+#toast{position:fixed;bottom:18px;left:50%;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media(max-width:820px){.shell{grid-template-columns:1fr}.side{position:static;height:auto;display:flex;overflow-x:auto;gap:4px;padding:10px}.side button{width:auto;white-space:nowrap}.brand,.brand-sub,.side hr{display:none}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="side" aria-label="Sections" id="nav"></nav>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script>(() => {
+'use strict';
+/* HirePilot AI – browser prototype. All "agents" are rule-based simulations; data stays in localStorage. */
+const KEY = 'hirepilot.v1';
+const STAGES = ['Sourced', 'Screened', 'Interview', 'Offer', 'Hired', 'Rejected'];
+const ACTIVE = ['Sourced', 'Screened', 'Interview', 'Offer'];
+const AGENTS = ['AI Recruitment Manager', 'AI Job Description Specialist', 'AI Talent Sourcing Assistant', 'AI CV Screening Assistant', 'AI Candidate Engagement Agent', 'AI Interview Coordinator', 'AI Offer & Onboarding Assistant', 'AI Recruitment Analytics Agent'];
+const NAV = [['overview', 'Overview'], ['manager', 'Recruitment Manager'], ['jd', 'Job Descriptions'], ['sourcing', 'Talent Sourcing'], ['screening', 'CV Screening'], ['engage', 'Candidate Engagement'], ['interviews', 'Interview Coordinator'], ['onboarding', 'Offer & Onboarding'], ['tasks', 'Task Ledger & Daily Report'], ['analytics', 'Analytics']];
+const PRI = { Initial: 0, Priority: 1, Pending: 2, Completed: 3 };
+
+const empty = () => ({ vacancies: [], candidates: [], jds: [], drafts: [], interviews: [], packs: [], tasks: [], log: [], uploadedFile: null, uploadedAt: null, reportEmail: '' });
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const ago = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
+const since = iso => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 864e5));
+const fmt = iso => new Date(iso).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+const list = s => String(s || '').split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+
+let S;
+try { S = Object.assign(empty(), JSON.parse(localStorage.getItem(KEY))); } catch (e) { S = empty(); }
+// Upgrade tasks created by earlier versions to the full project ledger schema.
+S.tasks = (S.tasks || []).map(t => ({
+  ...t,
+  taskId: t.taskId || t.id || uid(),
+  timestamp: t.timestamp || new Date().toISOString(),
+  assignedBy: t.assignedBy || 'Project Manager',
+  agent: t.agent || 'Unassigned Agent',
+  description: t.description || t.title || 'Project task',
+  priority: t.priority || 'Medium',
+  status: t.status || (t.done ? 'Completed' : 'Queued'),
+  outputLink: t.outputLink || '',
+  completionTime: t.completionTime || (t.done ? (t.updatedAt || new Date().toISOString()) : ''),
+  done: (t.status || (t.done ? 'Completed' : 'Queued')) === 'Completed'
+}));
+const ui = { view: 'overview', pendingFile: null };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage unavailable */ } };
+const log = t => { S.log.unshift({ t: new Date().toISOString(), text: t }); S.log = S.log.slice(0, 60); };
+const vac = id => S.vacancies.find(v => v.id === id);
+const cand = id => S.candidates.find(c => c.id === id);
+const put = (k, items) => items.forEach(i => { if (!S[k].some(x => x.id === i.id)) S[k].push(i); });
+const toast = m => { const t = document.getElementById('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 2400); };
+
+/* Download helper – creates a real file the user can save */
+const download = (filename, content, mime = 'text/plain;charset=utf-8') => {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  toast('Download started: ' + filename);
+};
+
+/* ---------- agent logic (rule-based) ---------- */
+const BIAS = ['rockstar', 'ninja', 'guru', 'young', 'digital native', 'recent graduate', 'native speaker', 'energetic', 'salesman', 'manpower', 'chairman'];
+function biasFlags(text) { const t = text.toLowerCase(); return BIAS.filter(w => new RegExp('\\b' + w + '\\b').test(t)); }
+
+function genJD(d) {
+  const must = list(d.must), nice = list(d.nice);
+  const notes = String(d.notes || '').split('\n').map(x => x.trim()).filter(Boolean);
+  const resp = notes.length ? notes : must.slice(0, 4).map(s => `Use ${s} to deliver the team's goals and share what you learn.`);
+  const out = [`${d.title} – ${d.dept || 'Company'}${d.location ? ' (' + d.location + ')' : ''}`, '',
+    'About the role', `We are hiring a ${d.title} to join ${d.dept || 'our team'}. You will work with ${d.manager || 'the hiring manager'} and the wider team.`, '',
+    'What you will do', ...resp.map(x => '• ' + x), '',
+    'What you need (job-related)', ...must.map(x => '• Experience with ' + x), ''];
+  if (nice.length) out.push('Nice to have', ...nice.map(x => '• ' + x), '');
+  out.push('Our process', 'A person reviews every application. You can ask for human contact or ask us to correct your data at any time. Tell us if you need adjustments at any step.');
+  return out.join('\n');
+}
+
+function screen(c) {
+  const v = vac(c.vid) || { must: [], nice: [] };
+  const text = (c.cv + ' ' + c.skills.join(' ')).toLowerCase();
+  const rows = [...v.must.map(s => ({ skill: s, type: 'Must have' })), ...v.nice.map(s => ({ skill: s, type: 'Nice to have' }))]
+    .map(r => ({ ...r, found: text.includes(r.skill.toLowerCase()) }));
+  const y = /(\d+)\+?\s*years/i.exec(c.cv);
+  const mf = rows.filter(r => r.type === 'Must have' && r.found).length;
+  c.screen = {
+    at: new Date().toISOString(), rows,
+    summary: `${c.name} reports ${y ? y[1] + ' years of experience' : 'an unspecified amount of experience'}. Documented evidence found for ${mf} of ${v.must.length} must-have criteria${mf < v.must.length ? ' (missing: ' + rows.filter(r => r.type === 'Must have' && !r.found).map(r => r.skill).join(', ') + ')' : ''}. A missing keyword is not proof of a missing skill – check the CV and ask.`
+  };
+}
+
+function makeDraft(type, c) {
+  const v = vac(c.vid) || { title: 'the role', manager: 'the hiring manager' };
+  const first = c.name.split(' ')[0];
+  const foot = '\n\nThis message was drafted with AI assistance and reviewed by a recruiter. If you prefer to speak with a person or want to correct your details, just reply and we will arrange it.';
+  const T = {
+    outreach: [`Opportunity: ${v.title}`, `Hi ${first},\n\nYour public profile mentions ${c.skills.slice(0, 2).join(' and ')}, which is relevant to our ${v.title} role. Would you be open to a short conversation about it?${foot}`],
+    acknowledgement: [`We received your application for ${v.title}`, `Hi ${first},\n\nThank you for applying for ${v.title}. A recruiter will review your application and we will update you on next steps.${foot}`],
+    followup: [`Following up: ${v.title}`, `Hi ${first},\n\nJust checking in on your application for ${v.title}. Are you still interested, and is there anything you would like to ask us?${foot}`],
+    status: [`Update on your ${v.title} application`, `Hi ${first},\n\nYour application for ${v.title} is moving forward and ${v.manager} would like to meet you. We will send available times shortly.${foot}`]
+  };
+  return { id: uid(), cid: c.id, type, subject: T[type][0], body: T[type][1], status: 'Draft' };
+}
+
+const guide = v => [...(v ? v.must : []).map(s => `Tell us about a time you used ${s} to deliver a result. What was your part, and what would you do differently?`),
+  'Describe a hard problem you solved with a team. How did you handle disagreements?', 'What do you want to learn in your first 90 days?', 'What questions do you have for us?'];
+
+function slots() {
+  const out = []; const d = new Date(); let i = 0;
+  while (out.length < 5) { d.setDate(d.getDate() + 1); if (d.getDay() % 6 === 0) continue; const s = new Date(d.getFullYear(), d.getMonth(), d.getDate(), i++ % 2 ? 14 : 10); out.push(s.toISOString()); }
+  return out;
+}
+
+const PACK_ITEMS = ['Offer letter drafted for HR/legal review', 'Pay and benefits confirmed by hiring manager', 'Reference checks done (with candidate consent)', 'Right-to-work and ID checks scheduled', 'Employment contract prepared', 'IT equipment and accounts requested', 'Buddy or mentor assigned', 'Welcome message approved', 'First-week plan approved'];
+const planTasks = vid => ['Prioritise vacancy and confirm hiring-manager needs', 'Draft job description', 'Identify sourcing channels and build pipeline', 'Summarise CVs against job criteria', 'Send acknowledgements and updates', 'Schedule interviews and prepare guides', 'Prepare offer and onboarding checklist', 'Report time-to-hire and bottlenecks'].map((t, i) => ({ id: `${vid}-t${i}`, taskId: `${vid}-t${i}`, vid, timestamp: new Date().toISOString(), assignedBy: 'Project Manager', agent: AGENTS[i], description: t, title: t, priority: 'Medium', status: 'Queued', outputLink: '', completionTime: '', done: false }));
+
+/* ---------- sample data ---------- */
+const C = (id, name, vid, source, skills, stage, d, created, yrs) => ({ id, name, email: name.toLowerCase().replace(/[^a-z]+/g, '.') + '@example.com', vid, source, skills, stage, stageSince: ago(d), created: ago(created), consent: true, cv: `${name}. ${yrs} years of experience. Hands-on work with ${skills.join(', ')}. Delivered projects in cross-functional teams.` });
+const SEED = {
+  vacancies() {
+    put('vacancies', [
+      { id: 'v1', title: 'Senior Data Engineer', dept: 'Engineering', manager: 'Maria Ozola', priority: 'Priority', status: 'Open', opened: ago(30), must: ['Python', 'SQL', 'Spark', 'Azure'], nice: ['Databricks', 'Airflow'] },
+      { id: 'v2', title: 'HR Business Partner', dept: 'People', manager: 'Janis Berzins', priority: 'Pending', status: 'Open', opened: ago(21), must: ['Employment law', 'Stakeholder management', 'Coaching'], nice: ['HRIS'] },
+      { id: 'v3', title: 'Customer Success Lead', dept: 'Sales', manager: 'Elena Petrova', priority: 'Initial', status: 'Open', opened: ago(12), must: ['Customer onboarding', 'CRM', 'Team leadership'], nice: ['SaaS'] }]);
+    put('tasks', planTasks('v1').map((t, i) => ({ ...t, done: i < 4 })));
+    log('Sample vacancies and task plan added');
+  },
+  jd() {
+    SEED.vacancies();
+    const v = vac('v1'), w = vac('v2');
+    put('jds', [
+      { id: 'j1', vid: 'v1', title: v.title, status: 'Approved', text: genJD({ ...v, notes: 'Design and run reliable data pipelines\nPartner with analysts on data quality\nImprove monitoring and cost' }), flags: [] },
+      { id: 'j2', vid: 'v2', title: w.title, status: 'Draft', text: genJD({ ...w, notes: 'Advise managers on people matters\nCoach leaders through change' }), flags: [] }]);
+    log('Sample job descriptions added');
+  },
+  sourcing() {
+    SEED.vacancies();
+    put('candidates', [
+      C('c1', 'Aiko Tanaka', 'v1', 'LinkedIn', ['Python', 'SQL', 'Spark'], 'Interview', 4, 18, 7),
+      C('c2', 'Daniel Okafor', 'v1', 'Referral', ['Python', 'Azure', 'SQL'], 'Screened', 9, 15, 6),
+      C('c3', 'Sofia Marques', 'v1', 'Job board', ['SQL', 'Tableau'], 'Sourced', 6, 6, 3),
+      C('c4', 'Liam Walsh', 'v2', 'Referral', ['Employment law', 'Coaching', 'Stakeholder management'], 'Offer', 3, 20, 9),
+      C('c5', 'Ingrid Larsen', 'v2', 'LinkedIn', ['Stakeholder management', 'Employment law'], 'Interview', 7, 16, 8),
+      C('c6', 'Priya Nair', 'v3', 'Job board', ['CRM', 'Customer onboarding', 'Team leadership'], 'Screened', 5, 9, 5),
+      C('c7', 'Mateo Silva', 'v3', 'Agency', ['CRM'], 'Sourced', 2, 2, 2),
+      C('c8', 'Chloe Dubois', 'v1', 'Job board', ['Python', 'SQL', 'Spark', 'Azure'], 'Hired', 2, 25, 8),
+      C('c9', 'Noah Kim', 'v1', 'Job board', ['Excel'], 'Rejected', 10, 14, 1)]);
+    log('Sample candidates added');
+  },
+  screening() {
+    SEED.sourcing();
+    S.candidates.filter(c => c.id.match(/^c[1-9]$/) && !c.screen && c.stage !== 'Sourced').forEach(screen);
+    const c9 = cand('c9'); if (c9 && !c9.decision) c9.decision = { choice: 'Reject', note: 'Does not meet two must-have criteria after CV review.', at: new Date().toISOString() };
+    log('Sample CV summaries added');
+  },
+  engage() {
+    SEED.sourcing();
+    put('drafts', [{ ...makeDraft('acknowledgement', cand('c1')), id: 'd1', status: 'Approved' }, { ...makeDraft('outreach', cand('c3')), id: 'd2' }, { ...makeDraft('status', cand('c5')), id: 'd3' }]);
+    log('Sample candidate messages added');
+  },
+  interviews() {
+    SEED.sourcing();
+    const when = h => { const d = new Date(); d.setDate(d.getDate() + h); d.setHours(10, 0, 0, 0); return d.toISOString(); };
+    put('interviews', [{ id: 'i1', cid: 'c1', when: when(2), who: 'Maria Ozola', status: 'Booked' }, { id: 'i2', cid: 'c5', when: when(-5), who: 'Janis Berzins', status: 'Done' }]);
+    log('Sample interviews added');
+  },
+  onboarding() {
+    SEED.sourcing();
+    put('packs', [
+      { id: 'p1', cid: 'c4', approved: false, items: PACK_ITEMS.map((t, i) => ({ t, done: i < 3 })) },
+      { id: 'p2', cid: 'c8', approved: true, items: PACK_ITEMS.map(t => ({ t, done: true })) }]);
+    log('Sample onboarding packs added');
+  },
+  tasks() {
+    const k = taskKpis();
+    const statusOptions = ['Queued', 'In Progress', 'Blocked', 'Completed'];
+    const tasks = [...S.tasks].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const report = dailyReportText();
+    return head(0, 'Task Ledger & Daily Email Report', 'Record every project task in a Google-Sheet-ready ledger, monitor delivery, and prepare a daily status bulletin.') + `
+    <div class="grid g4">
+      <div class="stat"><b>${k.total}</b><span>Total tasks</span></div>
+      <div class="stat"><b>${k.counts.Completed}</b><span>Completed</span></div>
+      <div class="stat"><b>${k.counts['In Progress']}</b><span>In progress</span></div>
+      <div class="stat"><b>${k.counts.Blocked}</b><span>Blocked</span></div>
+    </div>
+    <div class="card"><h2>Add task to ledger</h2>
+      <form class="f" data-form="ledgerTask">
+        <label>Task ID<input name="taskId" placeholder="Auto-generated if blank"></label>
+        <label>Assigned By<input name="assignedBy" value="Project Manager" required></label>
+        <label>Agent Name<input name="agent" placeholder="e.g. AI Recruitment Manager" required></label>
+        <label>Priority<select name="priority">${['Low','Medium','High','Urgent'].map(x => `<option value="${x}"${x === 'Medium' ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Status<select name="status">${statusOptions.map(x => `<option value="${x}"${x === 'Queued' ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="wide">Task Description<textarea name="description" required></textarea></label>
+        <label class="wide">Output / Result Link<input name="outputLink" type="url" placeholder="https://..."></label>
+        <div><button class="btn">Add task</button></div>
+      </form>
+    </div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2>Google Sheet ledger</h2><button class="btn ghost" data-act="downloadTaskCSV">Export ledger CSV</button></div>
+      <p class="lead">Columns: Task ID · Timestamp · Assigned By · Agent Name · Task Description · Priority · Status · Output / Result Link · Completion Time. Export the CSV and import it into Google Sheets.</p>
+      ${tasks.length ? `<div class="tbl"><table><thead><tr><th>Task ID / Timestamp</th><th>Assigned By</th><th>Agent</th><th>Description</th><th>Priority</th><th>Status</th><th>Output / Result</th><th>Completion Time</th></tr></thead><tbody>${tasks.map(t => `<tr>
+        <td><b>${esc(t.taskId)}</b><br><small>${esc(fmt(t.timestamp))}</small></td>
+        <td>${esc(t.assignedBy)}</td><td>${esc(t.agent)}</td><td>${esc(t.description)}</td>
+        <td>${esc(t.priority)}</td>
+        <td><select data-chg="ledgerStatus" data-id="${esc(t.id)}" aria-label="Status for ${esc(t.taskId)}">${statusOptions.map(x => `<option value="${x}"${x === t.status ? ' selected' : ''}>${x}</option>`).join('')}</select></td>
+        <td>${t.outputLink ? `<a href="${esc(t.outputLink)}" target="_blank" rel="noopener">Open result</a>` : '–'}</td>
+        <td>${t.completionTime ? esc(fmt(t.completionTime)) : '–'}</td>
+      </tr>`).join('')}</tbody></table></div>` : none('No tasks yet. Add a task above or use Plan tasks in Recruitment Manager.')}
+    </div>
+    <div class="card"><h2>Daily email report</h2>
+      <p class="lead">The bulletin includes completed, in-progress and blocked tasks, plus task KPIs for each agent/employee.</p>
+      <label style="max-width:420px">Report recipient email<input id="reportEmail" type="email" value="${esc(S.reportEmail || '')}" placeholder="you@company.com"></label>
+      <div class="row" style="margin:12px 0"><button class="btn" data-act="emailDailyReport">Prepare daily email</button><button class="btn ghost" data-act="downloadDailyReport">Download report</button><button class="btn ghost" data-act="copyDailyReport">Copy report text</button></div>
+      <h3>Report preview</h3><pre class="report-box">${esc(report)}</pre>
+      <p class="note" style="margin-top:12px">Automation note: this HTML prototype stores data in this browser only. It can prepare an email, but it cannot send an email every day while the browser is closed. Fully automatic daily delivery needs a server-side scheduler (for example, Google Apps Script time trigger or a workflow automation service) connected to Google Sheets and an email provider.</p>
+    </div>
+    <div class="card"><h2>Employee / agent KPIs</h2>
+      ${k.people.length ? `<div class="tbl"><table><tr><th>Employee / Agent</th><th>Total</th><th>Completed</th><th>In progress</th><th>Blocked</th><th>Queued</th><th>Completion rate</th></tr>${k.people.map(p => `<tr><td>${esc(p.agent)}</td><td>${p.total}</td><td>${p.completed}</td><td>${p.inProgress}</td><td>${p.blocked}</td><td>${p.queued}</td><td>${p.completionRate}%</td></tr>`).join('')}</table></div>` : none('KPIs appear after tasks are assigned.')}
+    </div>`;
+  },
+
+  analytics() { ['vacancies', 'sourcing', 'screening', 'engage', 'interviews', 'onboarding', 'jd'].forEach(k => SEED[k]()); }
+};
+
+/* ---------- views ---------- */
+const head = (n, t, d, seed) => `<header class="vh"><div><p class="ag">${n ? 'Agent ' + n + ' · ' + AGENTS[n - 1] : 'Workspace'}</p><h1>${t}</h1><p class="lead">${d}</p></div>${seed ? `<button class="btn ghost" data-act="seed" data-id="${seed}">Insert sample data</button>` : ''}</header>`;
+const none = m => `<div class="empty">${m}</div>`;
+const opts = (arr, sel, f = x => x) => arr.map(x => `<option value="${esc(f(x)[0])}"${f(x)[0] === sel ? ' selected' : ''}>${esc(f(x)[1])}</option>`).join('');
+const vacOpts = sel => opts(S.vacancies, sel, v => [v.id, v.title]);
+const candOpts = (sel, filter = () => true) => opts(S.candidates.filter(filter), sel, c => [c.id, `${c.name} – ${(vac(c.vid) || {}).title || ''} (${c.stage})`]);
+const stageTag = s => `<span class="tag ${s === 'Hired' ? 'ok' : s === 'Rejected' ? 'bad' : ''}">${s}</span>`;
+const noteHuman = '<p class="note">AI output here is a draft. A recruiter reviews it and makes every hiring decision.</p>';
+
+function pending() {
+  const p = [];
+  S.jds.filter(j => j.status === 'Draft').forEach(j => p.push(['jd', `Approve job description: ${j.title}`]));
+  S.drafts.filter(d => d.status === 'Draft').forEach(d => p.push(['engage', `Review message to ${(cand(d.cid) || {}).name}`]));
+  S.candidates.filter(c => c.screen && !c.decision && ACTIVE.includes(c.stage) && c.stage !== 'Offer').forEach(c => p.push(['screening', `Record decision for ${c.name}`]));
+  S.packs.filter(k => !k.approved).forEach(k => p.push(['onboarding', `Approve onboarding pack for ${(cand(k.cid) || {}).name}`]));
+  return p;
+}
+function metrics() {
+  const hired = S.candidates.filter(c => c.stage === 'Hired');
+  const tth = hired.length ? Math.round(hired.reduce((a, c) => a + since(c.created) - since(c.stageSince), 0) / hired.length) : null;
+  return { hired, tth, open: S.vacancies.filter(v => v.status === 'Open').length, active: S.candidates.filter(c => ACTIVE.includes(c.stage)).length };
+}
+
+
+function taskKpis() {
+  const statuses = ['Queued', 'In Progress', 'Blocked', 'Completed'];
+  const total = S.tasks.length;
+  const counts = Object.fromEntries(statuses.map(x => [x, S.tasks.filter(t => t.status === x).length]));
+  const people = [...new Set(S.tasks.map(t => t.agent || 'Unassigned Agent'))].sort().map(agent => {
+    const own = S.tasks.filter(t => (t.agent || 'Unassigned Agent') === agent);
+    const completed = own.filter(t => t.status === 'Completed').length;
+    return { agent, total: own.length, completed, inProgress: own.filter(t => t.status === 'In Progress').length,
+      blocked: own.filter(t => t.status === 'Blocked').length, queued: own.filter(t => t.status === 'Queued').length,
+      completionRate: own.length ? Math.round(completed / own.length * 100) : 0 };
+  });
+  return { total, counts, people };
+}
+function dailyReportText() {
+  const k = taskKpis();
+  const today = new Date().toLocaleDateString('en-GB');
+  const section = status => S.tasks.filter(t => t.status === status);
+  const rows = status => section(status).map(t => `• ${t.taskId} | ${t.agent} | ${t.description}${t.outputLink ? ' | ' + t.outputLink : ''}`);
+  return [
+    `HirePilot AI — Daily Project Status Bulletin`,
+    `Date: ${today}`,
+    '',
+    'TASK SUMMARY',
+    `Total tasks: ${k.total} | Completed: ${k.counts.Completed} | In progress: ${k.counts['In Progress']} | Blocked: ${k.counts.Blocked} | Queued: ${k.counts.Queued}`,
+    '',
+    'COMPLETED TASKS', ...(rows('Completed').length ? rows('Completed') : ['• None']),
+    '',
+    'TASKS IN PROGRESS', ...(rows('In Progress').length ? rows('In Progress') : ['• None']),
+    '',
+    'BLOCKED TASKS', ...(rows('Blocked').length ? rows('Blocked') : ['• None']),
+    '',
+    'KEY KPIs BY EMPLOYEE / AGENT',
+    ...(k.people.length ? k.people.map(p => `${p.agent}: ${p.completed}/${p.total} completed (${p.completionRate}%), ${p.inProgress} in progress, ${p.blocked} blocked, ${p.queued} queued`) : ['No task assignments yet.']),
+    '',
+    'Generated from the HirePilot AI task ledger.'
+  ].join('\n');
+}
+
+const VIEWS = {
+  overview() {
+    const m = metrics(), p = pending();
+    const up = S.uploadedFile
+      ? `<span class="tag ok">Loaded: ${esc(S.uploadedFile)}</span> <small>${S.uploadedAt ? fmt(S.uploadedAt) : ''}</small>`
+      : '<span class="tag warn">No file loaded yet</span>';
+    return head(0, 'HirePilot AI', 'Simple flow: 1) Load sample input  2) Work through sections (every change is recorded)  3) Generate final PDF') + `
+    <div class="card">
+      <h2>1. Load sample input</h2>
+      <p class="lead" style="margin-bottom:12px">Upload <b>sample-input.txt</b> (or any file) then click Load. This fills the workspace with vacancies and candidates.</p>
+      <div class="row" style="margin-bottom:10px">
+        <input type="file" id="pdfUpload" accept=".txt,.pdf,text/plain,application/pdf" style="max-width:280px">
+        <button class="btn" data-act="importPdf">Load file</button>
+        <button class="btn ghost" data-act="seed" data-id="analytics">Or load sample without file</button>
+      </div>
+      <p>${up}</p>
+    </div>
+    <div class="card">
+      <h2>2. Work through sections</h2>
+      <p class="lead">Use the left menu. Change stages, approve job descriptions, screen CVs, book interviews, etc. Every action is saved in the activity log below.</p>
+      <div class="flow" style="margin-top:10px">${['Vacancies', 'Job Descriptions', 'Sourcing', 'CV Screening', 'Messages', 'Interviews', 'Onboarding', 'Analytics'].map(x => `<span>${x}</span>`).join('<em>›</em>')}</div>
+    </div>
+    <div class="card">
+      <h2>3. Generate final PDF</h2>
+      <p class="lead" style="margin-bottom:12px">When you are finished, create one PDF that includes the input file name and all current data + activity log.</p>
+      <button class="btn" data-act="generateFinalPdf">Generate final PDF</button>
+      <button class="btn danger" data-act="reset" style="margin-left:8px">Clear all data</button>
+    </div>
+    <div class="grid g4"><div class="stat"><b>${m.open}</b><span>Open vacancies</span></div><div class="stat"><b>${m.active}</b><span>Active candidates</span></div><div class="stat"><b>${p.length}</b><span>Waiting for review</span></div><div class="stat"><b>${m.tth ?? '–'}</b><span>Avg days to hire</span></div></div>
+    <div class="grid g2">
+      <div class="card"><h2>Waiting for your review</h2>${p.length ? `<ul class="plain">${p.map(x => `<li><a href="#" data-go="${x[0]}">${esc(x[1])}</a></li>`).join('')}</ul>` : none('Nothing waiting.')}</div>
+      <div class="card"><h2>Activity log (each step recorded)</h2>${S.log.length ? `<ul class="plain">${S.log.slice(0, 10).map(l => `<li>${esc(l.text)} <small>(${fmt(l.t)})</small></li>`).join('')}</ul>` : none('Actions appear here as you work.')}</div>
+    </div>`;
+  },
+
+  manager() {
+    const vs = [...S.vacancies].sort((a, b) => (PRI[a.priority] ?? 99) - (PRI[b.priority] ?? 99));
+    return head(1, 'Recruitment Manager', 'Track vacancies, set priorities and give each agent its tasks.', 'vacancies') + `
+    <div class="card"><h2>Add vacancy</h2><form class="f" data-form="vacancy">
+      <label>Job title<input name="title" required></label><label>Department<input name="dept" required></label><label>Hiring manager<input name="manager" required></label>
+      <label>Priority<select name="priority">${opts(['Initial', 'Priority', 'Pending', 'Completed'], 'Initial')}</select></label>
+      <label>Must-have skills (comma separated)<input name="must" required></label><label>Nice-to-have skills<input name="nice"></label>
+      <div><button class="btn">Add vacancy</button></div></form></div>
+    <div class="card"><h2>Vacancies</h2>${vs.length ? `<div class="tbl"><table><tr><th>Role</th><th>Manager</th><th>Priority</th><th>Status</th><th>Days open</th><th>Candidates</th><th></th></tr>${vs.map(v => `<tr><td><b>${esc(v.title)}</b><br><small>${esc(v.dept)}</small></td><td>${esc(v.manager)}</td>
+      <td><select data-chg="pri" data-id="${v.id}">${opts(['Initial', 'Priority', 'Pending', 'Completed'], v.priority)}</select></td><td><span class="tag ${v.status === 'Open' ? 'ok' : ''}">${v.status}</span></td><td>${since(v.opened)}</td><td>${S.candidates.filter(c => c.vid === v.id && ACTIVE.includes(c.stage)).length}</td>
+      <td class="row"><button class="btn sm ghost" data-act="plan" data-id="${v.id}">Plan tasks</button><button class="btn sm ghost" data-act="toggleVac" data-id="${v.id}">${v.status === 'Open' ? 'Close' : 'Reopen'}</button><button class="btn sm danger" data-act="delVac" data-id="${v.id}">Delete</button></td></tr>`).join('')}</table></div>` : none('No vacancies yet. Add one or insert sample data.')}</div>
+    ${vs.map(v => { const t = S.tasks.filter(x => x.vid === v.id); return t.length ? `<div class="card"><h2>Tasks: ${esc(v.title)} <small>(${t.filter(x => x.done).length}/${t.length} done)</small></h2><ul class="chkl">${t.map(x => `<li><label><input type="checkbox" data-chg="task" data-id="${x.id}"${x.done ? ' checked' : ''}><span><b>${esc(x.agent)}:</b> ${esc(x.title)}</span></label></li>`).join('')}</ul></div>` : ''; }).join('')}`;
+  },
+
+  jd() {
+    const v = vac(ui.jdVac) || {};
+    return head(2, 'Job Descriptions', 'Turn hiring-manager input into a clear, job-related description. The checker flags wording that may exclude people.', 'jd') + `
+    <div class="card"><h2>Create job description</h2><label style="margin-bottom:12px">Start from a vacancy<select data-ui="jdVac"><option value="">– none –</option>${vacOpts(ui.jdVac)}</select></label>
+    <form class="f" data-form="jd"><input type="hidden" name="vid" value="${esc(v.id || '')}">
+      <label>Job title<input name="title" required value="${esc(v.title)}"></label><label>Department<input name="dept" value="${esc(v.dept)}"></label><label>Location<input name="location" placeholder="Riga, hybrid"></label>
+      <label>Hiring manager<input name="manager" value="${esc(v.manager)}"></label><label>Must-have skills<input name="must" value="${esc((v.must || []).join(', '))}" required></label><label>Nice-to-have skills<input name="nice" value="${esc((v.nice || []).join(', '))}"></label>
+      <label class="wide">Responsibilities (one per line, from the hiring manager)<textarea name="notes"></textarea></label><div><button class="btn">Generate draft</button></div></form></div>
+    ${S.jds.length ? S.jds.map(j => `<div class="card"><div class="row"><h2 style="margin:0">${esc(j.title)}</h2><span class="tag ${j.status === 'Approved' ? 'ok' : 'warn'}">${j.status}</span></div>
+      ${j.flags.length ? `<p class="note">Check this wording: ${j.flags.map(esc).join(', ')}. It may discourage some applicants.</p>` : '<p><span class="tag ok">No flagged wording found</span></p>'}
+      <pre class="doc" id="t-${j.id}" data-filename="${esc(j.title).replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-jd">${esc(j.text)}</pre><div class="row">${j.status === 'Draft' ? `<button class="btn sm" data-act="jdOk" data-id="${j.id}">Approve</button>` : ''}<button class="btn sm ghost" data-act="copy" data-id="t-${j.id}">Copy</button><button class="btn sm ghost" data-act="downloadText" data-id="t-${j.id}">Download</button><button class="btn sm danger" data-act="jdDel" data-id="${j.id}">Delete</button></div></div>`).join('') : none('No job descriptions yet.')}`;
+  },
+
+  sourcing() {
+    const v = vac(ui.srcVac) || S.vacancies[0];
+    const CH = { Engineering: ['LinkedIn search', 'Public developer communities (follow each site’s rules)', 'Employee referrals', 'Local tech meetups'], People: ['LinkedIn search', 'HR associations', 'Employee referrals'], Sales: ['Job boards', 'LinkedIn search', 'Sales communities', 'Employee referrals'] };
+    return head(3, 'Talent Sourcing', 'Find channels and keep an organised pipeline. Only add profiles from authorised sources.', 'sourcing') + `
+    <div class="card"><h2>Suggested channels</h2>${v ? `<label style="max-width:360px">Vacancy<select data-ui="srcVac">${vacOpts(v.id)}</select></label><ul class="plain" style="margin-top:10px">${(CH[v.dept] || ['Job boards', 'LinkedIn search', 'Employee referrals']).map(x => `<li>${x}</li>`).join('')}</ul>` : none('Add a vacancy first.')}</div>
+    <div class="card"><h2>Add candidate profile</h2><form class="f" data-form="cand"><label>Name<input name="name" required></label><label>Email<input name="email" type="email" required></label>
+      <label>Vacancy<select name="vid" required>${vacOpts('')}</select></label><label>Source<select name="source">${opts(['LinkedIn', 'Referral', 'Job board', 'Agency', 'Careers page'], '')}</select></label>
+      <label>Skills (comma separated)<input name="skills" required></label><label class="wide">CV text<textarea name="cv"></textarea></label>
+      <label class="chk wide"><input type="checkbox" name="consent" required>This profile comes from an authorised source and a lawful recruitment purpose is documented.</label><div><button class="btn">Add to pipeline</button></div></form></div>
+    <h2>Pipeline</h2><div class="board">${STAGES.map(s => { const cs = S.candidates.filter(c => c.stage === s); return `<div class="col"><h3>${s} <span>${cs.length}</span></h3>${cs.map(c => `<div class="pc"><b>${esc(c.name)}</b><br>${esc((vac(c.vid) || {}).title)}<br><small>${esc(c.source)} · ${since(c.stageSince)}d in stage</small><br><select data-chg="stage" data-id="${c.id}" aria-label="Move ${esc(c.name)}">${opts(STAGES, c.stage)}</select></div>`).join('')}</div>`; }).join('')}</div>${S.candidates.length ? '' : none('Pipeline is empty.')}`;
+  },
+
+  screening() {
+    const c = cand(ui.scrId);
+    const open = S.candidates.filter(x => x.stage !== 'Hired');
+    return head(4, 'CV Screening', 'Summarise a CV against the job’s own criteria. This view does not score or rank people. You decide.', 'screening') + noteHuman + `
+    <div class="card"><label style="max-width:480px">Candidate<select data-ui="scrId"><option value="">– choose –</option>${candOpts(ui.scrId, x => open.includes(x))}</select></label></div>
+    ${c ? `<div class="card"><h2>${esc(c.name)} · ${esc((vac(c.vid) || {}).title)}</h2><form data-form="screen" data-id="${c.id}"><label>CV text<textarea name="cv" required>${esc(c.cv)}</textarea></label><p><button class="btn">Run screening</button></p></form>
+    ${c.screen ? `<h3>Summary</h3><p>${esc(c.screen.summary)}</p><div class="tbl"><table><tr><th>Criterion</th><th>Type</th><th>Evidence in CV</th></tr>${c.screen.rows.map(r => `<tr><td>${esc(r.skill)}</td><td>${r.type}</td><td><span class="tag ${r.found ? 'ok' : 'warn'}">${r.found ? 'Found' : 'Not found – check'}</span></td></tr>`).join('')}</table></div>
+    <h3 style="margin-top:14px">Your decision ${c.decision ? `<span class="tag ${c.decision.choice === 'Reject' ? 'bad' : 'ok'}">${c.decision.choice}</span>` : ''}</h3>
+    ${c.decision ? `<p>${esc(c.decision.note || 'No note')} <small>(${fmt(c.decision.at)})</small></p>` : ''}
+    <form class="f" data-form="decide" data-id="${c.id}"><label>Decision<select name="choice">${opts(['Advance to interview', 'Hold', 'Reject'], '')}</select></label><label class="wide">Reason (required for rejection)<input name="note"></label><div><button class="btn">Record decision</button></div></form>` : ''}</div>` : none('Choose a candidate to screen. Sample data adds candidates with CVs.')}`;
+  },
+
+  engage() {
+    return head(5, 'Candidate Engagement', 'Draft personalised messages. Nothing is sent: approve a draft to mark it ready for your email tool.', 'engage') + noteHuman + `
+    <div class="card"><h2>New draft</h2><form class="f" data-form="draft"><label>Candidate<select name="cid" required>${candOpts('')}</select></label>
+      <label>Message type<select name="type"><option value="outreach">Outreach</option><option value="acknowledgement">Application acknowledgement</option><option value="followup">Follow-up</option><option value="status">Status update</option></select></label><div><button class="btn">Generate draft</button></div></form></div>
+    ${S.drafts.length ? S.drafts.map(d => `<div class="card"><div class="row"><h2 style="margin:0">${esc(d.subject)}</h2><span class="tag ${d.status === 'Approved' ? 'ok' : 'warn'}">${d.status === 'Approved' ? 'Approved (not sent)' : 'Needs review'}</span></div><p><small>To: ${esc((cand(d.cid) || {}).name)} &lt;${esc((cand(d.cid) || {}).email)}&gt;</small></p>
+      <pre class="doc" id="t-${d.id}" data-filename="message-${esc((cand(d.cid)||{}).name||'candidate').replace(/[^a-z0-9]+/gi,'-').toLowerCase()}">${esc(d.body)}</pre><div class="row">${d.status === 'Draft' ? `<button class="btn sm" data-act="draftOk" data-id="${d.id}">Approve</button>` : ''}<button class="btn sm ghost" data-act="copy" data-id="t-${d.id}">Copy</button><button class="btn sm ghost" data-act="downloadText" data-id="t-${d.id}">Download</button><button class="btn sm danger" data-act="draftDel" data-id="${d.id}">Delete</button></div></div>`).join('') : none('No drafts yet.')}`;
+  },
+
+  interviews() {
+    const c = cand(ui.intId);
+    return head(6, 'Interview Coordinator', 'Suggest slots, book interviews and prepare the same structured guide for every candidate for a role.', 'interviews') + `
+    <div class="card"><h2>Suggest slots</h2><label style="max-width:480px">Candidate<select data-ui="intId"><option value="">– choose –</option>${candOpts(ui.intId, x => ACTIVE.includes(x.stage))}</select></label>
+    ${c ? `<p>Free slots (simulated calendar, your local time):</p><div class="row">${slots().map(s => `<button class="btn sm ghost" data-act="book" data-id="${c.id}" data-iso="${s}">${fmt(s)}</button>`).join('')}</div>` : ''}</div>
+    <div class="card"><h2>Interviews</h2>${S.interviews.length ? S.interviews.map(i => { const k = cand(i.cid) || {}, v = vac(k.vid); const gText = ['Interview Guide', 'Candidate: ' + (k.name || ''), 'Role: ' + ((v && v.title) || ''), 'Interviewer: ' + (i.who || ''), 'When: ' + fmt(i.when), '', ...guide(v).map((q, n) => (n + 1) + '. ' + q), '', 'Scoring note: Score every answer 1–5 against the same job-related anchors. Write evidence, not impressions.'].join('\\n'); return `<div style="border-bottom:1px solid var(--line);padding:10px 0"><div class="row"><b>${esc(k.name)}</b> · ${esc(v && v.title)} · ${fmt(i.when)} · with ${esc(i.who)} <span class="tag ${i.status === 'Done' ? 'ok' : 'warn'}">${i.status}</span>
+      ${i.status === 'Booked' ? `<button class="btn sm ghost" data-act="intDone" data-id="${i.id}">Mark done</button>` : ''}<button class="btn sm ghost" data-act="downloadText" data-id="guide-${i.id}">Download guide</button><button class="btn sm danger" data-act="intDel" data-id="${i.id}">Cancel</button></div>
+      <details><summary>Interview guide</summary><pre class="doc" id="guide-${i.id}" data-filename="interview-guide-${esc((k.name||'candidate').replace(/[^a-z0-9]+/gi,'-').toLowerCase())}" style="display:none">${esc(gText)}</pre><ol>${guide(v).map(q => `<li>${esc(q)}</li>`).join('')}</ol><p><small>Score every answer 1–5 against the same job-related anchors. Write evidence, not impressions.</small></p></details></div>`; }).join('') : none('No interviews booked.')}</div>`;
+  },
+
+  onboarding() {
+    const eligible = S.candidates.filter(c => ['Offer', 'Hired'].includes(c.stage) && !S.packs.some(k => k.cid === c.id));
+    return head(7, 'Offer & Onboarding', 'Prepare checklists, a welcome message and a first-week plan. Staff approve before anything goes to the candidate.', 'onboarding') + noteHuman + `
+    <div class="card"><h2>Prepare pack</h2>${eligible.length ? `<form class="f" data-form="pack"><label>Candidate at offer or hired stage<select name="cid">${opts(eligible, '', c => [c.id, c.name])}</select></label><div><button class="btn">Prepare pack</button></div></form>` : none('No eligible candidates. Move someone to the Offer stage in Talent Sourcing, or insert sample data.')}</div>
+    ${S.packs.map(k => { const c = cand(k.cid) || {}, v = vac(c.vid) || {}, d = k.items.filter(i => i.done).length; return `<div class="card"><div class="row"><h2 style="margin:0">${esc(c.name)} · ${esc(v.title)}</h2>${stageTag(c.stage)}<span class="tag ${k.approved ? 'ok' : 'warn'}">${k.approved ? 'Approved' : 'Awaiting approval'}</span></div>
+      <p>${d} of ${k.items.length} checklist items done</p><ul class="chkl">${k.items.map((i, n) => `<li><label><input type="checkbox" data-chg="pack" data-id="${k.id}" data-n="${n}"${i.done ? ' checked' : ''}>${esc(i.t)}</label></li>`).join('')}</ul>
+      <details><summary>Welcome message and first-week plan</summary><pre class="doc" id="pack-${k.id}" data-filename="welcome-${esc((c.name||'').split(' ')[0]||'candidate').toLowerCase()}">Hi ${esc((c.name || '').split(' ')[0])},\n\nWelcome to the team! You will join ${esc(v.dept)} as ${esc(v.title)}, working with ${esc(v.manager)}.\n\nFirst week\nDay 1: Meet your manager and buddy, set up accounts.\nDay 2: Team introductions and tools walkthrough.\nDay 3: Shadow a colleague on live work.\nDay 4: Agree your 30-60-90 day goals.\nDay 5: Review the week with ${esc(v.manager)}.</pre></details>
+      <div class="row" style="margin-top:10px">${k.approved ? '' : `<button class="btn sm" data-act="packOk" data-id="${k.id}">Approve pack</button>`}${c.stage === 'Offer' ? `<button class="btn sm ghost" data-act="hire" data-id="${c.id}">Mark as hired</button>` : ''}<button class="btn sm ghost" data-act="downloadText" data-id="pack-${k.id}">Download welcome</button><button class="btn sm danger" data-act="packDel" data-id="${k.id}">Delete</button></div></div>`; }).join('')}`;
+  },
+
+  tasks() {
+    const k = taskKpis();
+    const statusOptions = ['Queued', 'In Progress', 'Blocked', 'Completed'];
+    const tasks = [...S.tasks].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const report = dailyReportText();
+    return head(0, 'Task Ledger & Daily Email Report', 'Record every project task in a Google-Sheet-ready ledger, monitor delivery, and prepare a daily status bulletin.') + `
+    <div class="grid g4">
+      <div class="stat"><b>${k.total}</b><span>Total tasks</span></div>
+      <div class="stat"><b>${k.counts.Completed}</b><span>Completed</span></div>
+      <div class="stat"><b>${k.counts['In Progress']}</b><span>In progress</span></div>
+      <div class="stat"><b>${k.counts.Blocked}</b><span>Blocked</span></div>
+    </div>
+    <div class="card"><h2>Add task to ledger</h2>
+      <form class="f" data-form="ledgerTask">
+        <label>Task ID<input name="taskId" placeholder="Auto-generated if blank"></label>
+        <label>Assigned By<input name="assignedBy" value="Project Manager" required></label>
+        <label>Agent Name<input name="agent" placeholder="e.g. AI Recruitment Manager" required></label>
+        <label>Priority<select name="priority">${['Low','Medium','High','Urgent'].map(x => `<option value="${x}"${x === 'Medium' ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Status<select name="status">${statusOptions.map(x => `<option value="${x}"${x === 'Queued' ? ' selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label class="wide">Task Description<textarea name="description" required></textarea></label>
+        <label class="wide">Output / Result Link<input name="outputLink" type="url" placeholder="https://..."></label>
+        <div><button class="btn">Add task</button></div>
+      </form>
+    </div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2>Google Sheet ledger</h2><button class="btn ghost" data-act="downloadTaskCSV">Export ledger CSV</button></div>
+      <p class="lead">Columns: Task ID · Timestamp · Assigned By · Agent Name · Task Description · Priority · Status · Output / Result Link · Completion Time. Export the CSV and import it into Google Sheets.</p>
+      ${tasks.length ? `<div class="tbl"><table><thead><tr><th>Task ID / Timestamp</th><th>Assigned By</th><th>Agent</th><th>Description</th><th>Priority</th><th>Status</th><th>Output / Result</th><th>Completion Time</th></tr></thead><tbody>${tasks.map(t => `<tr>
+        <td><b>${esc(t.taskId)}</b><br><small>${esc(fmt(t.timestamp))}</small></td>
+        <td>${esc(t.assignedBy)}</td><td>${esc(t.agent)}</td><td>${esc(t.description)}</td>
+        <td>${esc(t.priority)}</td>
+        <td><select data-chg="ledgerStatus" data-id="${esc(t.id)}" aria-label="Status for ${esc(t.taskId)}">${statusOptions.map(x => `<option value="${x}"${x === t.status ? ' selected' : ''}>${x}</option>`).join('')}</select></td>
+        <td>${t.outputLink ? `<a href="${esc(t.outputLink)}" target="_blank" rel="noopener">Open result</a>` : '–'}</td>
+        <td>${t.completionTime ? esc(fmt(t.completionTime)) : '–'}</td>
+      </tr>`).join('')}</tbody></table></div>` : none('No tasks yet. Add a task above or use Plan tasks in Recruitment Manager.')}
+    </div>
+    <div class="card"><h2>Daily email report</h2>
+      <p class="lead">The bulletin includes completed, in-progress and blocked tasks, plus task KPIs for each agent/employee.</p>
+      <label style="max-width:420px">Report recipient email<input id="reportEmail" type="email" value="${esc(S.reportEmail || '')}" placeholder="you@company.com"></label>
+      <div class="row" style="margin:12px 0"><button class="btn" data-act="emailDailyReport">Prepare daily email</button><button class="btn ghost" data-act="downloadDailyReport">Download report</button><button class="btn ghost" data-act="copyDailyReport">Copy report text</button></div>
+      <h3>Report preview</h3><pre class="report-box">${esc(report)}</pre>
+      <p class="note" style="margin-top:12px">Automation note: this HTML prototype stores data in this browser only. It can prepare an email, but it cannot send an email every day while the browser is closed. Fully automatic daily delivery needs a server-side scheduler (for example, Google Apps Script time trigger or a workflow automation service) connected to Google Sheets and an email provider.</p>
+    </div>
+    <div class="card"><h2>Employee / agent KPIs</h2>
+      ${k.people.length ? `<div class="tbl"><table><tr><th>Employee / Agent</th><th>Total</th><th>Completed</th><th>In progress</th><th>Blocked</th><th>Queued</th><th>Completion rate</th></tr>${k.people.map(p => `<tr><td>${esc(p.agent)}</td><td>${p.total}</td><td>${p.completed}</td><td>${p.inProgress}</td><td>${p.blocked}</td><td>${p.queued}</td><td>${p.completionRate}%</td></tr>`).join('')}</table></div>` : none('KPIs appear after tasks are assigned.')}
+    </div>`;
+  },
+
+  analytics() {
+    const m = metrics(), max = Math.max(1, ...STAGES.map(s => S.candidates.filter(c => c.stage === s).length));
+    const stageAvg = ACTIVE.map(s => { const cs = S.candidates.filter(c => c.stage === s); return { s, n: cs.length, avg: cs.length ? Math.round(cs.reduce((a, c) => a + since(c.stageSince), 0) / cs.length) : 0 }; });
+    const worst = [...stageAvg].filter(x => x.n).sort((a, b) => b.avg - a.avg)[0];
+    const srcs = [...new Set(S.candidates.map(c => c.source))].map(s => { const cs = S.candidates.filter(c => c.source === s); const adv = cs.filter(c => ['Interview', 'Offer', 'Hired'].includes(c.stage)).length; return { s, n: cs.length, adv, hires: cs.filter(c => c.stage === 'Hired').length }; });
+    const stalled = S.candidates.filter(c => ACTIVE.includes(c.stage) && since(c.stageSince) > 7);
+    return head(8, 'Recruitment Analytics', 'Pipeline stages, time-to-hire, source performance and bottlenecks, calculated from your data.', 'analytics') + `
+    <div class="row" style="margin-bottom:16px">
+      <button class="btn" data-act="generateFinalPdf">Generate final PDF</button>
+      <button class="btn ghost" data-act="downloadCSV">Candidates CSV</button>
+    </div>
+    <div class="grid g4"><div class="stat"><b>${S.candidates.length}</b><span>Total candidates</span></div><div class="stat"><b>${m.tth ?? '–'}</b><span>Average days to hire</span></div><div class="stat"><b>${m.hired.length}</b><span>Hires</span></div><div class="stat"><b>${stalled.length}</b><span>Stalled over 7 days</span></div></div>
+    <div class="grid g2"><div class="card"><h2>Pipeline by stage</h2>${S.candidates.length ? STAGES.map(s => { const n = S.candidates.filter(c => c.stage === s).length; return `<div class="bar"><span>${s}</span><i style="width:${n / max * 100}%"></i><b>${n}</b></div>`; }).join('') : none('No candidates yet.')}</div>
+    <div class="card"><h2>Bottlenecks</h2>${worst ? `<p>Candidates wait longest in <b>${worst.s}</b> (${worst.avg} days on average).</p>` : none('Not enough data.')}${stalled.length ? `<ul class="plain">${stalled.map(c => `<li>${esc(c.name)} · ${c.stage} · ${since(c.stageSince)} days</li>`).join('')}</ul>` : ''}</div></div>
+    <div class="card"><h2>Source effectiveness</h2>${srcs.length ? `<div class="tbl"><table><tr><th>Source</th><th>Candidates</th><th>Reached interview or later</th><th>Hires</th></tr>${srcs.map(x => `<tr><td>${esc(x.s)}</td><td>${x.n}</td><td>${x.adv}</td><td>${x.hires}</td></tr>`).join('')}</table></div><p><small>Small numbers: treat these as hints, not proof.</small></p>` : none('No data.')}</div>`;
+  }
+};
+
+/* ---------- rendering ---------- */
+function render() {
+  document.getElementById('nav').innerHTML = '<div class="brand">HirePilot AI</div><div class="brand-sub">HR &amp; Recruitment Agency</div>' + NAV.map(([k, t], i) => (i === 1 ? '<hr>' : '') + `<button data-view="${k}"${ui.view === k ? ' aria-current="page"' : ''}><span class="n">${i || '⌂'}</span>${t}</button>`).join('');
+  document.getElementById('view').innerHTML = VIEWS[ui.view]();
+}
+const go = v => { ui.view = v; render(); document.getElementById('view').focus(); window.scrollTo(0, 0); };
+const done = m => { save(); render(); if (m) toast(m); };
+
+/* ---------- events ---------- */
+const ACT = {
+  seed: id => { SEED[id](); done('Sample data inserted'); },
+  reset: () => { if (confirm('Delete all data in this browser?')) { S = empty(); ui.pendingFile = null; done('All data cleared'); } },
+  plan: id => { put('tasks', planTasks(id)); done('Tasks planned'); },
+  toggleVac: id => { const v = vac(id); v.status = v.status === 'Open' ? 'Closed' : 'Open'; log(`Vacancy ${v.title} set to ${v.status}`); done(); },
+  delVac: id => { S.vacancies = S.vacancies.filter(v => v.id !== id); S.tasks = S.tasks.filter(t => t.vid !== id); done('Vacancy deleted'); },
+  jdOk: id => { const j = S.jds.find(x => x.id === id); j.status = 'Approved'; log(`Approved job description: ${j.title}`); done('Approved'); },
+  jdDel: id => { S.jds = S.jds.filter(j => j.id !== id); done(); },
+  draftOk: id => { const d = S.drafts.find(x => x.id === id); d.status = 'Approved'; log(`Approved message to ${(cand(d.cid) || {}).name}`); done('Approved – not sent'); },
+  draftDel: id => { S.drafts = S.drafts.filter(d => d.id !== id); done(); },
+  book: (id, el) => { const c = cand(id), v = vac(c.vid); S.interviews.push({ id: uid(), cid: id, when: el.dataset.iso, who: v ? v.manager : 'Hiring manager', status: 'Booked' }); if (c.stage !== 'Interview') { c.stage = 'Interview'; c.stageSince = ago(0); } log(`Interview booked for ${c.name}`); done('Interview booked'); },
+  intDone: id => { S.interviews.find(i => i.id === id).status = 'Done'; done(); },
+  intDel: id => { S.interviews = S.interviews.filter(i => i.id !== id); done(); },
+  packOk: id => { const k = S.packs.find(x => x.id === id); k.approved = true; log(`Approved onboarding pack for ${(cand(k.cid) || {}).name}`); done('Approved'); },
+  packDel: id => { S.packs = S.packs.filter(k => k.id !== id); done(); },
+  hire: id => { const c = cand(id); c.stage = 'Hired'; c.stageSince = ago(0); log(`Marked ${c.name} as hired`); done('Marked as hired'); },
+  copy: id => { const t = document.getElementById(id).textContent; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('Copied'), () => toast('Copy not available here')); },
+  downloadText: id => {
+    const el = document.getElementById(id);
+    if (!el) return toast('Nothing to download');
+    const text = el.textContent || '';
+    const name = (el.dataset.filename || id.replace(/^t-/, 'document-')) + '.txt';
+    download(name, text);
+  },
+  downloadTaskCSV: () => {
+    const header = ['Task ID','Timestamp','Assigned By','Agent Name','Task Description','Priority','Status','Output / Result Link','Completion Time'];
+    const rows = S.tasks.map(t => [t.taskId,t.timestamp,t.assignedBy,t.agent,t.description,t.priority,t.status,t.outputLink,t.completionTime]
+      .map(x => `"${String(x ?? '').replace(/"/g,'""')}"`).join(','));
+    download('hirepilot-google-sheet-ledger.csv',[header.join(','),...rows].join('\n'),'text/csv;charset=utf-8');
+  },
+  downloadDailyReport: () => download('hirepilot-daily-status-report.txt',dailyReportText()),
+  copyDailyReport: () => {
+    const p = navigator.clipboard?.writeText(dailyReportText());
+    if (p) p.then(() => toast('Daily report copied'), () => toast('Copy not available here'));
+    else toast('Copy not available here');
+  },
+  emailDailyReport: () => {
+    const email = document.getElementById('reportEmail')?.value.trim() || '';
+    if (!email) return toast('Enter the report recipient email first');
+    S.reportEmail = email; save();
+    const subject = encodeURIComponent('HirePilot AI — Daily Project Status Bulletin');
+    const body = encodeURIComponent(dailyReportText());
+    window.location.href = `mailto:${encodeURIComponent(email)}?subject=${subject}&body=${body}`;
+    toast('Opening your email application with the report');
+  },
+  downloadReport: () => {
+    const m = metrics();
+    const lines = [
+      'HirePilot AI – Recruitment Analytics Report',
+      'Generated: ' + new Date().toLocaleString(),
+      '',
+      '=== SUMMARY ===',
+      'Open vacancies: ' + m.open,
+      'Active candidates: ' + m.active,
+      'Total candidates: ' + S.candidates.length,
+      'Hires: ' + m.hired.length,
+      'Average days to hire: ' + (m.tth ?? '–'),
+      '',
+      '=== PIPELINE BY STAGE ===',
+      ...STAGES.map(s => s + ': ' + S.candidates.filter(c => c.stage === s).length),
+      '',
+      '=== CANDIDATES ===',
+      ...S.candidates.map(c => {
+        const v = vac(c.vid) || {};
+        return `${c.name} | ${v.title || '–'} | ${c.stage} | Source: ${c.source} | Skills: ${c.skills.join(', ')}`;
+      }),
+      '',
+      '=== DECISION LOG ===',
+      ...S.log.slice(0, 30).map(l => `${fmt(l.t)} – ${l.text}`)
+    ];
+    download('hirepilot-analytics-report.txt', lines.join('\n'));
+  },
+  downloadCSV: () => {
+    const header = ['Name', 'Email', 'Vacancy', 'Stage', 'Source', 'Skills', 'Days in stage', 'Created'];
+    const rows = S.candidates.map(c => {
+      const v = vac(c.vid) || {};
+      return [c.name, c.email, v.title || '', c.stage, c.source, c.skills.join('; '), since(c.stageSince), c.created]
+        .map(x => `"${String(x).replace(/"/g, '""')}"`).join(',');
+    });
+    download('hirepilot-candidates.csv', [header.join(','), ...rows].join('\n'), 'text/csv;charset=utf-8');
+  },
+  downloadJSON: () => {
+    download('hirepilot-full-export.json', JSON.stringify(S, null, 2), 'application/json');
+  },
+  importPdf: () => {
+    const input = document.getElementById('pdfUpload');
+    const file = input && input.files && input.files[0];
+    if (!file) return toast('Please choose a file first');
+    S.uploadedFile = file.name;
+    S.uploadedAt = new Date().toISOString();
+    SEED.analytics();
+    log('Loaded input file: ' + file.name);
+    done('Loaded ' + file.name + '. Now work through the sections. Every change is recorded.');
+  },
+  generateFinalPdf: () => {
+    if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
+      return toast('PDF library not loaded. Check your internet connection and reload.');
+    }
+    const { jsPDF } = window.jspdf || window;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    let y = 16;
+    const line = (txt, size = 10, color = [15, 27, 45]) => {
+      if (y > 275) { doc.addPage(); y = 16; }
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      const lines = doc.splitTextToSize(String(txt), pageW - margin * 2);
+      doc.text(lines, margin, y);
+      y += lines.length * (size * 0.4 + 1.2) + 1;
+    };
+    const heading = (txt) => { y += 3; line(txt, 13, [11, 110, 153]); y += 1; };
+    const m = metrics();
+
+    line('HirePilot AI – Final Recruitment Report', 16, [15, 27, 45]);
+    line('Generated: ' + new Date().toLocaleString(), 9, [90, 102, 120]);
+    line('Includes original uploaded data + all modifications made in each section.', 9, [90, 102, 120]);
+    y += 2;
+    doc.setDrawColor(11, 110, 153);
+    doc.line(margin, y, pageW - margin, y);
+    y += 6;
+
+    heading('1. Uploaded source document');
+    if (S.uploadedFile) {
+      line('File: ' + S.uploadedFile);
+      line('Uploaded at: ' + (S.uploadedAt ? fmt(S.uploadedAt) : '–'));
+      line('Status: Data was imported from this PDF and then modified in the workspace.');
+    } else {
+      line('No PDF was uploaded. Report is based on sample / manually entered data only.');
+    }
+
+    heading('2. Summary metrics (after modifications)');
+    line('Open vacancies: ' + m.open + '   |   Active candidates: ' + m.active + '   |   Total candidates: ' + S.candidates.length);
+    line('Hires: ' + m.hired.length + '   |   Average days to hire: ' + (m.tth ?? '–') + '   |   Items waiting review: ' + pending().length);
+
+    heading('3. Vacancies (current state)');
+    if (!S.vacancies.length) line('No vacancies.');
+    S.vacancies.forEach(v => {
+      line(v.title + '  ·  ' + v.dept + '  ·  Manager: ' + v.manager + '  ·  Priority: ' + v.priority + '  ·  Status: ' + v.status + '  ·  Days open: ' + since(v.opened));
+      line('  Must-have: ' + (v.must || []).join(', ') + (v.nice && v.nice.length ? '  |  Nice-to-have: ' + v.nice.join(', ') : ''), 9, [90, 102, 120]);
+    });
+
+    heading('4. Candidate pipeline (current state)');
+    STAGES.forEach(s => {
+      const cs = S.candidates.filter(c => c.stage === s);
+      line(s + ' (' + cs.length + ')', 11);
+      cs.forEach(c => {
+        const v = vac(c.vid) || {};
+        line('  ' + c.name + '  ·  ' + (v.title || '–') + '  ·  Source: ' + c.source + '  ·  Skills: ' + (c.skills || []).join(', ') + '  ·  ' + since(c.stageSince) + 'd in stage', 9);
+        if (c.decision) line('    Decision: ' + c.decision.choice + (c.decision.note ? ' – ' + c.decision.note : ''), 8, [90, 102, 120]);
+      });
+    });
+
+    heading('5. Job descriptions');
+    if (!S.jds.length) line('No job descriptions.');
+    S.jds.forEach(j => {
+      line(j.title + '  [' + j.status + ']', 11);
+      const preview = (j.text || '').split('\n').slice(0, 8).join(' | ');
+      line(preview, 8, [90, 102, 120]);
+    });
+
+    heading('6. Candidate messages (drafts)');
+    if (!S.drafts.length) line('No message drafts.');
+    S.drafts.forEach(d => {
+      const c = cand(d.cid) || {};
+      line((d.subject || 'Message') + '  →  ' + (c.name || '') + '  [' + d.status + ']', 10);
+    });
+
+    heading('7. Interviews');
+    if (!S.interviews.length) line('No interviews booked.');
+    S.interviews.forEach(i => {
+      const c = cand(i.cid) || {}, v = vac(c.vid) || {};
+      line((c.name || '') + '  ·  ' + (v.title || '') + '  ·  ' + fmt(i.when) + '  ·  with ' + (i.who || '') + '  [' + i.status + ']', 10);
+    });
+
+    heading('8. Offer & onboarding packs');
+    if (!S.packs.length) line('No onboarding packs.');
+    S.packs.forEach(k => {
+      const c = cand(k.cid) || {}, v = vac(c.vid) || {};
+      const doneN = (k.items || []).filter(i => i.done).length;
+      line((c.name || '') + '  ·  ' + (v.title || '') + '  ·  ' + doneN + '/' + (k.items || []).length + ' checklist items  ·  ' + (k.approved ? 'Approved' : 'Awaiting approval'), 10);
+    });
+
+    heading('9. Project task ledger');
+    if (!S.tasks.length) line('No project tasks recorded.');
+    S.tasks.forEach(t => line(`${t.taskId} | ${t.timestamp} | ${t.assignedBy} | ${t.agent} | ${t.description} | ${t.priority} | ${t.status} | ${t.outputLink || '–'} | ${t.completionTime || '–'}`, 8));
+
+    heading('10. Decision / activity log');
+    (S.log.slice(0, 25)).forEach(l => line(fmt(l.t) + '  –  ' + l.text, 8, [90, 102, 120]));
+    if (!S.log.length) line('No entries yet.');
+
+    y += 6;
+    doc.setDrawColor(217, 222, 229);
+    doc.line(margin, y, pageW - margin, y);
+    y += 5;
+    line('End of report · HirePilot AI prototype · Data remained in the browser · ' + new Date().toISOString().slice(0, 10), 8, [90, 102, 120]);
+
+    doc.save('hirepilot-final-report.pdf');
+    toast('Final PDF report downloaded');
+  }
+};
+const FORM = {
+  ledgerTask: f => {
+    const now = new Date().toISOString();
+    const status = f.status || 'Queued';
+    const id = uid();
+    S.tasks.unshift({ id, taskId: (f.taskId || '').trim() || `TASK-${Date.now()}`, timestamp: now,
+      assignedBy: f.assignedBy.trim(), agent: f.agent.trim(), description: f.description.trim(),
+      priority: f.priority, status, outputLink: (f.outputLink || '').trim(),
+      completionTime: status === 'Completed' ? now : '', done: status === 'Completed' });
+    log(`Task added to ledger: ${S.tasks[0].taskId} assigned to ${S.tasks[0].agent}`);
+    done('Task added to ledger');
+  },
+  vacancy: f => { S.vacancies.push({ id: uid(), title: f.title, dept: f.dept, manager: f.manager, priority: f.priority, status: 'Open', opened: ago(0), must: list(f.must), nice: list(f.nice) }); log(`Vacancy added: ${f.title}`); done('Vacancy added'); },
+  jd: f => { const text = genJD(f); S.jds.unshift({ id: uid(), vid: f.vid, title: f.title, text, flags: biasFlags(text + ' ' + f.notes), status: 'Draft' }); done('Draft created'); },
+  cand: f => { S.candidates.push({ id: uid(), name: f.name, email: f.email, vid: f.vid, source: f.source, skills: list(f.skills), cv: f.cv || '', stage: 'Sourced', stageSince: ago(0), created: ago(0), consent: true }); log(`Candidate added: ${f.name} (${f.source})`); done('Candidate added'); },
+  screen: (f, id) => { const c = cand(id); c.cv = f.cv; screen(c); if (c.stage === 'Sourced') { c.stage = 'Screened'; c.stageSince = ago(0); } done('Summary ready for your review'); },
+  decide: (f, id) => {
+    const c = cand(id);
+    if (f.choice === 'Reject' && !f.note.trim()) return toast('Add a reason for the rejection');
+    c.decision = { choice: f.choice, note: f.note, at: new Date().toISOString() };
+    if (f.choice === 'Reject') { c.stage = 'Rejected'; c.stageSince = ago(0); } else if (f.choice.startsWith('Advance')) { c.stage = 'Interview'; c.stageSince = ago(0); }
+    log(`${f.choice}: ${c.name}${f.note ? ' – ' + f.note : ''}`); done('Decision recorded');
+  },
+  draft: f => { S.drafts.unshift(makeDraft(f.type, cand(f.cid))); done('Draft created for review'); },
+  pack: f => { S.packs.push({ id: uid(), cid: f.cid, approved: false, items: PACK_ITEMS.map(t => ({ t, done: false })) }); done('Pack prepared'); }
+};
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-view],[data-act],[data-go]'); if (!t) return;
+  if (t.dataset.view) go(t.dataset.view);
+  else if (t.dataset.go) { e.preventDefault(); go(t.dataset.go); }
+  else ACT[t.dataset.act](t.dataset.id, t);
+});
+document.addEventListener('change', e => {
+  const t = e.target, d = t.dataset;
+  if (d.ui) { ui[d.ui] = t.value; render(); }
+  else if (d.chg === 'pri') { vac(d.id).priority = t.value; done(); }
+  else if (d.chg === 'task') { S.tasks.find(x => x.id === d.id).done = t.checked; done(); }
+  else if (d.chg === 'ledgerStatus') {
+    const task = S.tasks.find(x => x.id === d.id);
+    if (task) {
+      task.status = t.value;
+      task.done = t.value === 'Completed';
+      task.completionTime = t.value === 'Completed' ? (task.completionTime || new Date().toISOString()) : '';
+      log(`Task ${task.taskId} status changed to ${task.status}`);
+      done('Task status updated');
+    }
+  }
+  else if (d.chg === 'pack') { S.packs.find(x => x.id === d.id).items[+d.n].done = t.checked; done(); }
+  else if (d.chg === 'stage') {
+    const c = cand(d.id);
+    if (t.value === 'Rejected') { const r = (prompt('Reason for rejection (saved in the decision log):') || '').trim(); if (!r) { render(); return toast('Rejection needs a reason'); } log(`Reject: ${c.name} – ${r}`); }
+    else log(`Moved ${c.name} to ${t.value}`);
+    c.stage = t.value; c.stageSince = ago(0); done();
+  }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('form[data-form]'); if (!f) return; e.preventDefault();
+  const data = Object.fromEntries(new FormData(f).entries());
+  FORM[f.dataset.form](data, f.dataset.id);
+});
+
+render();
+})();
+</script>
+</body>
+</html>
